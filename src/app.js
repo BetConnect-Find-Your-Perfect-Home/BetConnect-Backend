@@ -4,6 +4,9 @@ import bookmarkRoutes from "./routes/bookmark.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 
+import { errorHandler } from './middlewares/errorhandler.js';
+import helmet from 'helmet';
+import cors from 'cors';
 
 const app = express();
 
@@ -16,6 +19,12 @@ app.use('/api/admin', adminRoutes);
 
 // Health check
 
+app.use (errorHandler);
+app.use(helmet());
+app.use(cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  }));
 app.get('/health', (req, res) => {
     res.status(200).json({ 
         status: 'success',
