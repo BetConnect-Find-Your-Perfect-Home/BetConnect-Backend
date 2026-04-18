@@ -6,7 +6,6 @@ import { errorHandler } from "./middleware/error.middleware.js";
 import helmet from 'helmet';
 import cors from 'cors';
 
-import authRoutes from './routes/auth.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 
 const app = express();

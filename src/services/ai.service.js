@@ -1,6 +1,11 @@
 import Groq from 'groq-sdk';
 
-const groq = new Groq({apikey: process.env.GROQ_API_KEY});
+const groqApiKey = process.env.GROQ_API_KEY;
+if (!groqApiKey) {
+    throw new Error('GROQ_API_KEY environment variable is required to initialize Groq client.');
+}
+
+const groq = new Groq({ apiKey: groqApiKey });
 
 export const generateDescription = async (propertyData) => {
     const {type, subcity, woreda, kebele, size, floor, price, specialName} = propertyData;
