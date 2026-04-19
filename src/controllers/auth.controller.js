@@ -6,9 +6,12 @@ export const register = asyncHandler(async (req, res) => {
 
         const {name, email, phone, password, role, personalAddress} = req.body;
         
-        if(!name || !email || !phone || !password || !role || !personalAddress){
+        if(!name || !email || !phone || !password || !role){
             return res.status(400).json({ message: "Please insert all the required fields" });
         }
+        if (role === 'agent' && !personalAddress) {
+        return res.status(400).json({ message: "Agents must provide a personal address" });
+    }
         const userExists = await User.findOne({email}); 
         if(userExists){
             return res.status(400).json({message: 'User already exists'});

@@ -12,12 +12,12 @@ export const protect = async (req, res, next) => {
       req.user = await User.findById(decoded.id).select('-password');
       next();
     } catch (error) {
-      res.status(401).json({ message: 'Not authorized, token failed' });
+      return res.status(401).json({ message: 'Not authorized, token failed' });
     }
   }
 
   if (!token) {
-    res.status(401).json({ message: 'Not authorized, no token' });
+    return res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
 
@@ -39,19 +39,18 @@ export const approvedAgent = (req, res, next) => {
 };
 
 export const optionalAuth = async (req, res, next) => {
-
     const authHeader = req.headers.authorization;
 
-    if (!authHeader?.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Not authorized, no token' });
+    if (authHeader?.startsWith('Bearer ')) {
+        try {
+            const token = authHeader.split(' ')[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            req.user = await User.findById(decoded.id).select('-password');
+        } catch (error) {
+            // Ignore token errors for optional auth - just don't set req.user
+        }
     }
 
-    try {
-        const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = await User.findById(decoded.id).select('-password');
-        next();
-    } catch (error) {
-        res.status(401).json({ message: 'Not authorized, token failed' });
-    }
+    next();
 };
+

@@ -15,13 +15,11 @@ import {
 
 const router = express.Router();
 
-router.route('/')
-    .post(protect, approvedAgent, validate(createPropertyValidator), createProperty)
-    .get(optionalAuth, getProperties);
+router.post('/', protect, approvedAgent, createPropertyValidator, validate, createProperty)
+router.get('/', optionalAuth, getProperties);
 
-router.route('/:id')
-    .get(optionalAuth, getPropertyById)
-    .put(protect, validate(updatePropertyValidator), updateProperty)
-    .delete(protect, deleteProperty);
+router.get('/:id', optionalAuth, getPropertyById);
+router.put('/:id', protect, updatePropertyValidator, validate, updateProperty);
+router.delete('/:id', protect, deleteProperty);
 
 export default router;
