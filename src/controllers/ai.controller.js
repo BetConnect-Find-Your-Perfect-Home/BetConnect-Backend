@@ -1,4 +1,4 @@
-import Property from '../models/Property.model.js';
+import Property from '../models/property.model.js';
 import { chatWithData } from '../services/ai.service.js';
 
 export const handleChat = async (req, res) => {
