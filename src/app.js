@@ -3,7 +3,6 @@ import authRoutes from "./routes/auth.routes.js";
 import bookmarkRoutes from "./routes/bookmark.routes.js";
 import propertyRoutes from "./routes/property.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
-import propertyRoutes from "./routes/property.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import helmet from 'helmet';
 import swaggerJsdoc from 'swagger-jsdoc';
@@ -40,7 +39,6 @@ app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/property', propertyRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
-app.use('/api/property', propertyRoutes);
 
 // Swagger setup
 const swaggerOptions = {
@@ -67,10 +65,8 @@ const swaggerOptions = {
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Health check
 
 app.use('/uploads', express.static('uploads'));
-app.use (errorHandler);
 
 app.get('/health', (req, res) => {
     res.status(200).json({ 

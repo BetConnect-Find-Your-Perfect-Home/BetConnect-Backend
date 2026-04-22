@@ -17,11 +17,6 @@ export const register = asyncHandler(async (req, res) => {
             return res.status(400).json({message: 'User already exists'});
         }
 
-    const userExists = await User.findOne({ email }); 
-    if (userExists) {
-        return res.status(400).json({ message: 'User already exists' });
-    }
-
     const assignedRole = role === 'agent' ? 'agent' : 'user';
     const assignedStatus = assignedRole === 'agent' ? 'pending' : 'approved';
 
@@ -51,19 +46,23 @@ export const register = asyncHandler(async (req, res) => {
 });
 
 export const login = asyncHandler(async (req, res) => {
-    const {email, password} = req.body;
     
-        const user = await User.findOne({email});
-        if(user && (await user.matchPassword(password))){
-            res.json({
-                _id: user._id,
-                name: user.name, 
-                email: user.email,
-                role: user.role,
-                status: user.status,
-                token: generateToken(user._id),
-            });
-        }else {
-            res.status(401).json({message: 'Invalid email or Password'});
-        }
-    });
+    const {email, password} = req.body;
+    console.log('[LOGIN] Request received for:', email);
+    const user = await User.findOne({email});
+    console.log('[LOGIN] User lookup finished:', user ? 'User found' : 'User not found');
+    if(user && (await user.matchPassword(password))){
+        console.log('[LOGIN] Password matched for:', email);
+        res.json({
+            _id: user._id,
+            name: user.name, 
+            email: user.email,
+            role: user.role,
+            status: user.status,
+            token: generateToken(user._id),
+        });
+    }else {
+        console.log('[LOGIN] Invalid credentials for:', email);
+        res.status(401).json({message: 'Invalid email or Password'});
+    }
+});
