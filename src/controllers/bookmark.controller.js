@@ -1,10 +1,12 @@
 import Bookmark from "../models/bookmark.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-// Add bookmark
+
 export const addBookmark = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { propertyId } = req.params;
 
+  console.log(`Attempting to bookmark property: ${propertyId} for user: ${userId}`);
+  
   const exists = await Bookmark.findOne({
     user: userId,
     property: propertyId

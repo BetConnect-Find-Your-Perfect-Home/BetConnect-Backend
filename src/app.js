@@ -3,7 +3,6 @@ import authRoutes from "./routes/auth.routes.js";
 import bookmarkRoutes from "./routes/bookmark.routes.js";
 import propertyRoutes from "./routes/property.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
-import propertyRoutes from "./routes/property.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import helmet from 'helmet';
 import swaggerJsdoc from 'swagger-jsdoc';
@@ -14,8 +13,10 @@ import aiRoutes from './routes/ai.routes.js';
 
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const app = express();
 
 const uploadDir = './uploads';
@@ -30,7 +31,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
 app.use(express.json());
 
@@ -40,7 +43,6 @@ app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/property', propertyRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
-app.use('/api/property', propertyRoutes);
 
 // Swagger setup
 const swaggerOptions = {
@@ -67,10 +69,8 @@ const swaggerOptions = {
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Health check
 
-app.use('/uploads', express.static('uploads'));
-app.use (errorHandler);
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.get('/health', (req, res) => {
     res.status(200).json({ 

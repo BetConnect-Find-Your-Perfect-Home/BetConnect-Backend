@@ -3,7 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { generateDescription } from '../services/ai.service.js';
 
 export const createProperty = asyncHandler(async (req, res) => {
-    const imagePaths = req.files ? req.files.map(file => file.path) : [];
+    const imagePaths = req.files ? req.files.map(file => file.path.replace(/\\/g, '/')) : [];
     const {
         size,
         type,
@@ -116,6 +116,12 @@ export const getProperties = asyncHandler(async (req, res) => {
     });
 });
 
+export const getMyProperties = asyncHandler(async (req, res) => {
+    const properties = await Property.find({ agent: req.user._id })
+        .sort({ createdAt: -1 });
+
+    res.json(properties);
+});
 
 export const getPropertyById = asyncHandler(async (req, res) => {
     const property = await Property.findById(req.params.id).populate('agent', 'name email phone');
