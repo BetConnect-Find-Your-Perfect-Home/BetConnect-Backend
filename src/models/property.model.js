@@ -1,71 +1,59 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const propertySchema = new mongoose.Schema({
-    agent: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    size: {
-        type: Number,
-        required: true
-    },
-    type: {
-        type: String,
-        enum: ['apartment', 'house', 'villa', 'condo', 'studio', 'commercial', 'land'],
-        required: true
-    },
-    floor: {
-        type: String,
-        required: true
-    },
-    price: {
-        type: Number,
-        required: true
-    },
-    listingType: {
-        type: String,
-        enum: ['rent', 'sale'],
-        required: true
-    },
-    images: [{
-        type: String
-    }],
-    subcity: {
-        type: String,
-        required: true
-    },
-    woreda: {
-        type: String,
-        required: true
-    },
-    kebele: {
-        type: String,
-        required: true
-    },
-    specialName: {
-        type: String
+const propertySchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: true,
+      trim: true,
     },
     description: {
-        type: String
+      type: String,
+      required: true,
     },
-    aiDescription: {
-        type: String
+    price: {
+      type: Number,
+      required: true,
     },
-    bedrooms: {
-        type: Number
+    type: {
+      type: String,
+      enum: ["house", "apartment", "land", "commercial"],
+      required: true,
     },
-    bathrooms: {
-        type: Number
-    },
-    
     status: {
+      type: String,
+      enum: ["for_sale", "for_rent", "sold"],
+      default: "for_sale",
+    },
+    images: [{ type: String }],
+    agent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    address: {
+      type: String,
+      required: true,
+    },
+    // GeoJSON Point — required for $near / $geoWithin queries
+    location: {
+      type: {
         type: String,
-        enum: ['available', 'sold', 'rented'],
-        default: 'available'
-    }
-}, { timestamps: true });
+        enum: ["Point"],
+        required: true,
+        default: "Point",
+      },
+      coordinates: {
+        // [longitude, latitude]  — MongoDB uses lng first
+        type: [Number],
+        required: true,
+      },
+    },
+  },
+  { timestamps: true }
+);
 
-const Property = mongoose.models.Property || mongoose.model('Property', propertySchema);
-export default Property;
+// 2dsphere index enables geospatial queries
+propertySchema.index({ location: "2dsphere" });
 
+export default mongoose.model("Property", propertySchema);

@@ -1,207 +1,146 @@
-import Property from '../models/property.model.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
-import { generateDescription } from '../services/ai.service.js';
+import Property from "../models/property.model.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
+// ─── Create Property ────────────────────────────────────────────────────────
+// POST /api/properties
 export const createProperty = asyncHandler(async (req, res) => {
-    const imagePaths = req.files ? req.files.map(file => file.path.replace(/\\/g, '/')) : [];
-    const {
-        size,
-        type,
-        floor,
-        price,
-        listingType,
-        subcity,
-        woreda,
-        kebele,
-        specialName,
-        description,
-        bedrooms,
-        bathrooms
-    } = req.body;
+  const { title, description, price, type, status, images, address, lat, lng } =
+    req.body;
 
-    const generatedAiDescription = await generateDescription({
-        type: listingType,
-        subcity,
-        woreda,
-        kebele,
-        size,
-        floor,
-        price,
-        specialName: specialName || "this property"
-    })
+  if (!lat || !lng) {
+    return res
+      .status(400)
+      .json({ message: "lat and lng are required for map placement" });
+  }
 
-    const property = await Property.create({
-        agent: req.user._id,
-        size,
-        type,
-        floor,
-        price,
-        listingType,
-        images: imagePaths,
-        subcity,
-        woreda,
-        kebele,
-        specialName,
-        description,
-        aiDescription: generatedAiDescription,
-        bedrooms,
-        bathrooms
-    });
+  const property = await Property.create({
+    title,
+    description,
+    price,
+    type,
+    status,
+    images,
+    address,
+    agent: req.user._id,
+    location: {
+      type: "Point",
+      coordinates: [parseFloat(lng), parseFloat(lat)], // GeoJSON: [lng, lat]
+    },
+  });
 
-    res.status(201).json(property);
+  res.status(201).json(property);
 });
 
-
+// ─── Get All Properties ──────────────────────────────────────────────────────
+// GET /api/properties
 export const getProperties = asyncHandler(async (req, res) => {
-    const {
-        minPrice,
-        maxPrice,
-        listingType,
-        woreda,
-        subcity,
-        kebele,
-        type,
-        minSize,
-        maxSize,
-        bedrooms,
-        status,
-        page = 1,
-        limit = 10
-    } = req.query;
+  const { type, status, minPrice, maxPrice } = req.query;
 
-    const query = {};
+  const filter = {};
+  if (type) filter.type = type;
+  if (status) filter.status = status;
+  if (minPrice || maxPrice) {
+    filter.price = {};
+    if (minPrice) filter.price.$gte = Number(minPrice);
+    if (maxPrice) filter.price.$lte = Number(maxPrice);
+  }
 
-    if (minPrice || maxPrice) {
-        query.price = {};
-        if (minPrice) query.price.$gte = Number(minPrice);
-        if (maxPrice) query.price.$lte = Number(maxPrice);
-    }
-
-    if (listingType) query.listingType = listingType;
-    if (woreda) query.woreda = woreda;
-    if (subcity) query.subcity = subcity;
-    if (kebele) query.kebele = kebele;
-    if (type) query.type = type;
-    if (bedrooms) query.bedrooms = Number(bedrooms);
-    if (status) query.status = status;
-
-    if (minSize || maxSize) {
-        query.size = {};
-        if (minSize) query.size.$gte = Number(minSize);
-        if (maxSize) query.size.$lte = Number(maxSize);
-    }
-
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const properties = await Property.find(query)
-        .populate('agent', 'name email phone')
-        .sort({ createdAt: -1 })
-        .lean();
-
-    const total = await Property.countDocuments(query);
-
-    // Hide agent phone if user is not logged in
-    const sanitizedProperties = properties.map(property => {
-        if (!req.user) {
-            delete property.agent.phone;
-        }
-        return property;
-    });
-
-    res.json({
-        properties: sanitizedProperties,
-        page: Number(page),
-        pages: Math.ceil(total / Number(limit)),
-        total
-    });
+  const properties = await Property.find(filter).populate("agent", "name email phone");
+  res.json(properties);
 });
 
-export const getMyProperties = asyncHandler(async (req, res) => {
-    const properties = await Property.find({ agent: req.user._id })
-        .sort({ createdAt: -1 });
-
-    res.json(properties);
-});
-
+// ─── Get Single Property ─────────────────────────────────────────────────────
+// GET /api/properties/:id
 export const getPropertyById = asyncHandler(async (req, res) => {
-    const property = await Property.findById(req.params.id).populate('agent', 'name email phone');
+  const property = await Property.findById(req.params.id).populate(
+    "agent",
+    "name email phone"
+  );
 
-    if (!property) {
-        return res.status(404).json({ message: 'Property not found' });
-    }
+  if (!property) {
+    return res.status(404).json({ message: "Property not found" });
+  }
 
-    const propertyObj = property.toObject();
-
-    // Hide agent phone if user is not logged in
-    if (!req.user && propertyObj.agent) {
-        delete propertyObj.agent.phone;
-    }
-
-    res.json(propertyObj);
+  res.json(property);
 });
 
-
+// ─── Update Property ─────────────────────────────────────────────────────────
+// PUT /api/properties/:id
 export const updateProperty = asyncHandler(async (req, res) => {
-    const property = await Property.findById(req.params.id);
+  const property = await Property.findById(req.params.id);
 
-    if (!property) {
-        return res.status(404).json({ message: 'Property not found' });
-    }
+  if (!property) {
+    return res.status(404).json({ message: "Property not found" });
+  }
 
-    // Check if user is the owner
-    if (property.agent.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: 'Not authorized to update this property' });
-    }
+  // Only the agent who created it or an admin can update
+  if (
+    property.agent.toString() !== req.user._id.toString() &&
+    req.user.role !== "admin"
+  ) {
+    return res.status(403).json({ message: "Not authorized" });
+  }
 
-    const {
-        size,
-        type,
-        floor,
-        price,
-        listingType,
-        images,
-        subcity,
-        woreda,
-        kebele,
-        description,
-        bedrooms,
-        bathrooms,
-        status
-    } = req.body;
+  const { lat, lng, ...rest } = req.body;
 
-    property.size = size || property.size;
-    property.type = type || property.type;
-    property.floor = floor || property.floor;
-    property.price = price || property.price;
-    property.listingType = listingType || property.listingType;
-    property.images = images || property.images;
-    property.subcity = subcity || property.subcity;
-    property.woreda = woreda || property.woreda;
-    property.kebele = kebele || property.kebele;
-    property.description = description || property.description;
-    property.bedrooms = bedrooms || property.bedrooms;
-    property.bathrooms = bathrooms || property.bathrooms;
-    property.status = status || property.status;
+  if (lat && lng) {
+    rest.location = {
+      type: "Point",
+      coordinates: [parseFloat(lng), parseFloat(lat)],
+    };
+  }
 
-    const updatedProperty = await property.save();
+  const updated = await Property.findByIdAndUpdate(req.params.id, rest, {
+    new: true,
+    runValidators: true,
+  });
 
-    res.json(updatedProperty);
+  res.json(updated);
 });
 
-
+// ─── Delete Property ──────────────────────────────────────────────────────────
+// DELETE /api/properties/:id
 export const deleteProperty = asyncHandler(async (req, res) => {
-    const property = await Property.findById(req.params.id);
+  const property = await Property.findById(req.params.id);
 
-    if (!property) {
-        return res.status(404).json({ message: 'Property not found' });
-    }
+  if (!property) {
+    return res.status(404).json({ message: "Property not found" });
+  }
 
-    // Check if user is the owner
-    if (property.agent.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: 'Not authorized to delete this property' });
-    }
+  if (
+    property.agent.toString() !== req.user._id.toString() &&
+    req.user.role !== "admin"
+  ) {
+    return res.status(403).json({ message: "Not authorized" });
+  }
 
-    await property.deleteOne();
+  await property.deleteOne();
+  res.json({ message: "Property deleted" });
+});
 
-    res.json({ message: 'Property removed' });
+// ─── Nearby Properties (GPS Search) ──────────────────────────────────────────
+// GET /api/properties/nearby?lat=9.03&lng=38.74&radius=5000
+// radius is in meters (default 5km)
+export const getNearbyProperties = asyncHandler(async (req, res) => {
+  const { lat, lng, radius = 5000 } = req.query;
+
+  if (!lat || !lng) {
+    return res
+      .status(400)
+      .json({ message: "lat and lng query params are required" });
+  }
+
+  const properties = await Property.find({
+    location: {
+      $near: {
+        $geometry: {
+          type: "Point",
+          coordinates: [parseFloat(lng), parseFloat(lat)],
+        },
+        $maxDistance: Number(radius), // meters
+      },
+    },
+  }).populate("agent", "name email phone");
+
+  res.json(properties);
 });
