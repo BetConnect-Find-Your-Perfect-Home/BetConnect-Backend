@@ -20,6 +20,22 @@ const propertySchema = new mongoose.Schema(
       enum: ["house", "apartment", "land", "commercial"],
       required: true,
     },
+<<<<<<< HEAD
+=======
+    bathrooms: {
+        type: Number
+    },
+    
+    isVerified: {
+        type: Boolean,
+        default: true
+    },
+    aiFlagged: {
+        type: Boolean,
+        default: false
+    },
+    
+>>>>>>> 13cfce60bcba9ce271b1e82291f36ef43abb7395
     status: {
       type: String,
       enum: ["for_sale", "for_rent", "sold"],
